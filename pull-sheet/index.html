@@ -6,16 +6,22 @@ title: Update Spreadsheet
 <!--These are JavaScript Libraries-->
 <!-- <script type="text/javascript" src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script> -->
 
-<script type="text/javascript" src="papaparse.min.js"></script> <!-- https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js -->
-<script type="text/javascript" src="js-yaml.min.js"></script> <!-- https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js -->
+<script type="text/javascript" src="papaparse.min.js"></script>
+<!-- https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.1.0/papaparse.min.js -->
+<script type="text/javascript" src="js-yaml.min.js"></script>
+<!-- https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js -->
 <script type="text/javascript" src="github.js"></script>
+<!-- jQuery from CDN -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
+<div id="positionsContainer"></div>
+<div id="membersContainer"></div>
 <h1>Update</h1>
 <script type="text/javascript">
 
     // dict of all published sheets and corresponding resource names
     var $resources = {
-        team: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR9Bopp7wygWjBmMaN8_hc4tytmtRc88Dehu1W9B-pjetK_LRcTahB7tRpSPY-tKeAK5w93TC-DKElE/pub?gid=253503174&single=true&output=tsv'
+        team: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQaAcYUBQeVf21WQakxKbNkekWGtXWlfhDwgRm6Fn4V578ic4L8nK8xy2S8hvLFf7vYRS1beD4u_agK/pub?output=tsv'
     }
 
     var header_maps = {
@@ -39,17 +45,17 @@ title: Update Spreadsheet
     }
 
     // some constants related to gh-pages repository
-    var $org = 'gsaurabhr';
+    var $org = 'Hitesh4278';
     var $repo = 'webdesign-test-template';
     var $branch = 'gh-pages';
-    
+
     // this function extracts parameters from the URL to pass on to the javascript
-    function getUrlVar(key){
+    function getUrlVar(key) {
         var result = new RegExp(key + "=([^&]*)", "i").exec(window.location.search);
         return result && unescape(result[1]) || "";
     }
 
-    function getGDriveDlURL(url){
+    function getGDriveDlURL(url) {
         // reference: https://github.com/UltiRequiem/drive_link/blob/main/mod.ts
         const regexp = /https:\/\/drive\.google\.com\/open\?id=(?<id>.*?)$/;
         if (regexp.test(url)) {
@@ -68,7 +74,7 @@ title: Update Spreadsheet
     // var $resource = "";
 
     function init() {
-        $.each($resources, function(name, url) {
+        $.each($resources, function (name, url) {
             // $resource = name;
             function cb(results) {
                 showInfo(results, name);
@@ -79,11 +85,11 @@ title: Update Spreadsheet
             }
 
             function map_values(value, header) {
-                if ( header == "image" ) {return getGDriveDlURL(value);}
-                if ( header == "display") {return parseInt(value);}
-                if ( header == "alumni") {return parseInt(value);}
-                if ( header == "highlight") {return parseInt(value);}
-                if ( header == "conference") {return parseInt(value);}
+                if (header == "image") { return getGDriveDlURL(value); }
+                if (header == "display") { return parseInt(value); }
+                if (header == "alumni") { return parseInt(value); }
+                if (header == "highlight") { return parseInt(value); }
+                if (header == "conference") { return parseInt(value); }
                 return value;
             }
 
@@ -99,40 +105,145 @@ title: Update Spreadsheet
             });
         });
     };
-
     window.addEventListener('DOMContentLoaded', init)
 
+    // Wait for the page to finish loading
+    var myData;
     function showInfo(results, $resource) {
         // var GitHub = require('github-api');
-        console.log($resource);
-        console.log(results.data);
-        console.log(results.errors);
-        console.log(results.meta);
+        // console.log($resource);
+        // console.log(results.data);
+        // console.log(results.errors);
+        // console.log(results.meta);
         var data = results.data
-          
+        myData = data;
+        var uniquePositions = getUniquePositions(data);
+
+        // Display unique positions with checkboxes
+        var checkboxesHtml = '';
+        uniquePositions.forEach(function (position, index) {
+            checkboxesHtml += '<input type="checkbox" id="position_' + index + '" value="' + position + '">';
+            checkboxesHtml += '<label for="position_' + index + '">' + position + '</label><br>';
+        });
+
+        // Append checkboxes to a container in your HTML, e.g., <div id="positionsContainer"></div>
+        document.getElementById('positionsContainer').innerHTML = checkboxesHtml;
+
         // data comes through as a simple array since simpleSheet is turned on
         alert("Successfully processed " + data.length + " rows for " + $resource + "!")
-         
+        displayAllMembers();
         $items = new Array();
 
-        $.each( data, function(i, service) {
+        $.each(data, function (i, service) {
             $p = {};
-            $.each(service, function($key, $value) {
-              $p[$key] = $value;
+            $.each(service, function ($key, $value) {
+                $p[$key] = $value;
             });
             $items.push($p);
         });
 
         console.log($items);
-        
+
         $yaml_dump = jsyaml.dump($items);
         document.getElementById('source').value = $yaml_dump;
 
-        var github = new Github({token: $GHToken, auth: "oauth"});
+        var github = new Github({ token: $GHToken, auth: "oauth" });
         var repo = github.getRepo($org, $repo);
         $writepath = '_data/' + $resource + '.yaml';
-        
-        repo.write($branch, $writepath, $yaml_dump, 'Update ' + $resource, function(err) { console.log(err); });
+
+        repo.write($branch, $writepath, $yaml_dump, 'Update ' + $resource, function (err) { console.log(err); });
+        // console.log($branch ," " ,$writepath , " " , $repo)
     };
+
+    function getUniquePositions(data) {
+        var positions = [];
+        data.forEach(function (service) {
+            if (service.position && !positions.includes(service.position)) {
+                positions.push(service.position);
+            }
+        });
+        return positions;
+    }
+    // Add an event listener to checkboxes
+    document.addEventListener('change', function (event) {
+        var checkedCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        var selectedPositions = Array.from(checkedCheckboxes).map(function (checkbox) {
+            return checkbox.value;
+        });
+
+        if (selectedPositions.length > 0) {
+            var members = getMembersByPositions(selectedPositions);
+            displayMembers(members);
+        } else {
+            // If no checkboxes are checked, display all members
+            displayAllMembers();
+        }
+    });
+
+    // Function to get members by position
+    function getMembersByPositions(position) {
+        var members = [];
+        myData.forEach(function (service) {
+            if (position.includes(service.position)) {
+                members.push({
+                    name: service.name,
+                    email: service.email,
+                    position: service.position
+                });
+            }
+        });
+        return members;
+    }
+
+    // Function to display members
+    function displayMembers(members) {
+        var membersContainer = document.getElementById('membersContainer');
+        membersContainer.innerHTML = ''; // Clear previous contents
+
+        if (members.length > 0) {
+            members.forEach(function (member) {
+                var memberDiv = document.createElement('div');
+                memberDiv.classList.add('member');
+
+                var nameParagraph = document.createElement('p');
+                nameParagraph.textContent = 'Name: ' + member.name;
+
+                var emailParagraph = document.createElement('p');
+                emailParagraph.textContent = 'Email: ' + member.email;
+
+                var positionParagraph = document.createElement('p');
+                positionParagraph.textContent = 'Position: ' + member.position;
+
+                memberDiv.appendChild(nameParagraph);
+                memberDiv.appendChild(emailParagraph);
+                memberDiv.appendChild(positionParagraph);
+
+                membersContainer.appendChild(memberDiv);
+            });
+        } else {
+            membersContainer.textContent = 'No members found for this position.';
+        }
+    }
+    // Function to handle the case when no checkboxes are checked
+    function displayAllMembers() {
+        var allMembers = getAllMembers();
+        displayMembers(allMembers);
+    }
+
+    // Function to get all members
+    function getAllMembers() {
+        var allMembers = [];
+        myData.forEach(function (service) {
+            allMembers.push({
+                name: service.name,
+                email: service.email,
+                position: service.position
+            });
+        });
+        return allMembers;
+    }
+
+
+
 </script>
 <textarea cols="10" rows="5" id="source" style="border: 1px solid #000; width: 100%; height: 500px;"></textarea>
